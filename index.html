@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+    <title>Pooja Jewellers - Estimate</title>
+    <style>
+        .mainContainer {
+            font-family: sans-serif;
+            max-width: 350px;
+            margin: 20px auto;
+        }
+
+        input {
+            font-size: 14px;
+            width: 95%;
+            padding: 3px;
+            margin-bottom: 5px;
+        }
+
+        label {
+            font-size: 14px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .itemDiv {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            max-width: 350px;
+            border-color: black;
+            border-style: solid;
+            border-width: 1px;
+            border-radius: 7px;
+        }
+
+        button {
+            width: 100%;
+            height: 40px;
+            margin-top: 10px;
+            border-radius: 5px;
+            transition-duration: 0.4s;
+            background-color: #555555;
+            color: white;
+            border: 2px solid #555555;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .pdfContainer {
+            width: 8.3in;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+
+        table {
+            width: 7.5in;
+            border-collapse: collapse;
+            border: 1px solid black;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+
+        }
+
+        td {
+            border: 1px solid black;
+            height: 18px;
+            padding-left: 5px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            line-height: 1;
+            /* no extra vertical space in line box */
+            vertical-align: middle;
+            /* aligns text vertically center; or use top if preferred */
+            white-space: nowrap;
+        }
+
+        .amtCell {
+            text-align: right;
+            padding-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="mainContainer">
+
+        <img src="page-header.png" style="width:350px; margin-top:0;">
+
+        <label>Customer Name</label>
+        <input type="text" id="customerName" style="text-transform: uppercase;" autocomplete="off">
+
+        <label>Mobile Number</label>
+        <input type="text" id="mobileNumber" maxlength="10" autocomplete="off">
+
+<!--    
+        <label>Rate</label>   
+        <input type="number" id="rate" step="0.01" autocomplete="off">
+-->
+
+
+        <div id="container" class="container"></div>
+
+        <button onclick="addItem()" style="margin-bottom: 10px;">Add Item</button>
+
+       
+        <label>Grand Total</label>
+        <input type="number" id="hiddenGrandTotal" step=".01" style="display: none;">
+        <input type="text" id="grandTotal" step=".01" readonly>
+
+        <label>GST Rate</label>
+        <input type="number" id="gstPercent" step="1" onblur="calculateGrandTotal()">
+
+        <input type="number" id="hiddenGSTAmt" step=".01" style="display: none;">
+
+        <label id="grandTotalLabel">Grand Total incl GST</label>
+        <input type="text" id="grandTotalAfterGST" step=".01" readonly>
+        <input type="number" id="hiddenGrandTotalAfterGST" step=".01" style="display: none;">
+
+
+        <label>Discount</label>
+        <input type="text" id="discount" step=".01" onblur="calculateGrandTotal()">
+
+        <label>Grand Total after Discount</label>
+        <input type="number" id="hiddenGrandTotalAfterDiscount" step=".01" style="display: none;">
+        <input type="text" id="grandTotalAfterDiscount" step=".01" readonly>
+
+
+        <hr>
+        
+        <h4 style="margin-bottom:15px;">Payment Mode:</h4>
+
+        <div id="paymentMethodDiv">
+            <label>Cash <button onclick="fullCash()"
+                    style="font-size: 10px; padding: 2px 2px; max-width: 110px;  max-height: 20px;  margin-top: 0; margin-bottom:5px; margin-left:10px; border-radius: 2px; background-color:green;">Full
+                    Cash</button> </label>
+            <input type="number" id="cashAmt" class="paymentMethod" printName="Cash" step="0.01"
+                onblur="updateBalance()"><br>
+            <label>UPI</label><br>
+            <input type="number" id="upiAmt" class="paymentMethod" printName="UPI" step="0.01"
+                onblur="updateBalance()"><br>
+            <label>Card</label>
+            <input type="number" id="cardAmt" class="paymentMethod" printName="Card" step="0.01"
+                onblur="updateBalance()"><br>
+            <label>Old Gold/Silver</label>
+            <input type="number" id="oldAmt" class="paymentMethod" printName="Old G/S" step="0.01"
+                onblur="updateBalance()"><br>
+
+            <label>Balance Receivable:</label>
+            <input type="number" id="balanceReceivable" step="0.01" readonly><br>
+
+            <hr>
+
+            <button id="generateInvoiceButton" onclick="generateInvoiceNew()">Generate Invoice</button><br>
+
+        </div>
+    </div>
+
+
+    <div id="pdfContainer"></div>
+
+
+
+    <script>
+
+        function formatNumber(num, decimals) {
+            return parseFloat(num || 0).toFixed(decimals);
+        }
+
+        function formatIndianCurrencyNew(num, decimals) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(num);
+        }
+
+        function addItem() {
+
+            const itemContainer = document.getElementById('container');
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'itemDiv';
+            itemDiv.innerHTML = `
+                                <label>Item Name</label>
+                                <input type="text" class="itemName" style="text-transform: uppercase;"><br>
+
+                                <label>Purity</label>
+                                <input type="text" class="purity" autocomplete="off">
+
+                                <label>Rate</label>
+                                <input type="number" class="rate" step="0.01" autocomplete="off">
+
+                                <label>Gross Wt</label>
+                                <input type="number" class="grossWt" step="0.001" onblur="updateCalculations(this.parentElement)"><br>
+
+                                <label>Stone Wt</label>
+                                <input type="number" class="stoneWt" step="0.001" onblur="updateCalculations(this.parentElement)"><br>
+
+                                <label>Nett Wt</label>
+                                <input type="number" class="nettWt" step="0.001" readonly><br>
+
+                                <label>VA %</label>
+                                <input type="number" class="va" step="0.01" onblur="updateCalculations(this.parentElement)"><br>
+
+                                <label>MC/gm</label>
+                                <input type="number" class="mc" step="0.01" onblur="updateCalculations(this.parentElement)"><br>
+
+                                <label>Other Charges</label>
+                                <input type="number" class="otherCharges" step="0.01" onblur="updateCalculations(this.parentElement)"><br>
+
+                                <input type="text" class="hiddenSubtotal" style="display:none;" readonly>
+
+                                <label>Subtotal</label>
+                                <input type="text" class="subtotal" readonly><br>
+                                <button style="width:120px; background-color:#c43414;" onclick="removeItem(this.parentElement)">✖ Delete Item</button>
+
+                                `;
+
+            itemContainer.appendChild(itemDiv);
+        }
+
+        function updateBalance() {
+            const cashAmt = document.getElementById('cashAmt').value || 0;
+            const upiAmt = document.getElementById('upiAmt').value || 0;
+            const cardAmt = document.getElementById('cardAmt').value || 0;
+            const oldAmt = document.getElementById('oldAmt').value || 0;
+            let grandTotalAfterDiscount = document.getElementById('hiddenGrandTotalAfterDiscount').value || 0;
+
+            let balanceReceivable = grandTotalAfterDiscount - cashAmt - upiAmt - cardAmt - oldAmt;
+            document.getElementById("balanceReceivable").value = formatNumber(balanceReceivable, 2);
+
+
+
+            if (balanceReceivable == 0) {
+                document.getElementById("generateInvoiceButton").onclick = generateInvoiceNew;
+                document.getElementById("generateInvoiceButton").style.backgroundColor = "green";
+            }
+
+            if (balanceReceivable != 0) {
+                document.getElementById("generateInvoiceButton").onclick = balanceAlert;
+                document.getElementById("generateInvoiceButton").style.backgroundColor = "grey";
+            }
+        }
+
+
+
+        function updateCalculations(itemDiv) {
+            //const rate = parseFloat(document.getElementById('rate').value) || 0;
+            const rate = parseFloat(itemDiv.querySelector('.rate').value) || 0;
+            const grossWt = parseFloat(itemDiv.querySelector('.grossWt').value) || 0;
+            const stoneWt = parseFloat(itemDiv.querySelector('.stoneWt').value) || 0;
+            const va = parseFloat(itemDiv.querySelector('.va').value) || 0;
+            const mc = parseFloat(itemDiv.querySelector('.mc').value) || 0;
+            const otherCharges = parseFloat(itemDiv.querySelector('.otherCharges').value) || 0;
+
+            // Calculate Nett Wt
+            const nettWt = grossWt - stoneWt;
+
+            // Format values
+            itemDiv.querySelector('.grossWt').value = formatNumber(grossWt, 3);
+            itemDiv.querySelector('.stoneWt').value = formatNumber(stoneWt, 3);
+            itemDiv.querySelector('.nettWt').value = formatNumber(nettWt, 3);
+            itemDiv.querySelector('.va').value = formatNumber(va, 2);
+            itemDiv.querySelector('.mc').value = formatNumber(mc, 2);
+            itemDiv.querySelector('.otherCharges').value = formatNumber(otherCharges, 2);
+
+            // Calculate and Update Subtotal
+            const goldComponent = (nettWt * (1 + (va / 100))) * rate;
+            const mcComponent = nettWt * mc;
+            const subtotal = Math.round(goldComponent + mcComponent + otherCharges);
+            itemDiv.querySelector('.hiddenSubtotal').value = subtotal;
+            itemDiv.querySelector('.subtotal').value = formatIndianCurrencyNew(subtotal, 2);
+
+            calculateGrandTotal()
+        }
+
+        function calculateGrandTotal() {
+
+            let grandTotal = 0;
+            document.querySelectorAll(".hiddenSubtotal").forEach(input => {
+                grandTotal += parseFloat(input.value) || 0;
+            });
+
+            document.getElementById('hiddenGrandTotal').value = grandTotal || 0;
+            document.getElementById('grandTotal').value = formatIndianCurrencyNew(grandTotal, 2);
+
+            let gstPercent = document.getElementById('gstPercent').value || 0;
+            let gstAmount = grandTotal * (gstPercent / 100);
+            document.getElementById('hiddenGSTAmt').value = gstAmount;
+
+            //Grand Total including GST
+            let grandTotalAfterGST = Math.round(grandTotal + gstAmount);
+        
+            document.getElementById("hiddenGrandTotalAfterGST").value = grandTotalAfterGST;
+            document.getElementById("grandTotalAfterGST").value = formatIndianCurrencyNew(grandTotalAfterGST, 2);
+
+            discount = document.getElementById('discount').value || 0;
+            let grandTotalAfterDiscount = grandTotalAfterGST - discount;
+
+            document.getElementById('hiddenGrandTotalAfterDiscount').value = grandTotalAfterDiscount;
+            document.getElementById('grandTotalAfterDiscount').value = formatIndianCurrencyNew(grandTotalAfterDiscount, 2);
+
+            if (gstPercent != 0) {
+                document.getElementById('grandTotalLabel').innerHTML = `Grand Total (Including ${gstPercent}% GST)`;
+            }
+            if (gstPercent == 0) {
+                document.getElementById('grandTotalLabel').innerHTML = "Grand Total";
+            }
+            updateBalance();
+        }
+
+
+        function fullCash() {
+            var amt = document.getElementById("hiddenGrandTotalAfterDiscount").value;
+            document.getElementById("cashAmt").focus()
+            document.getElementById("cashAmt").value = amt;
+            document.getElementById("upiAmt").focus()
+        }
+
+        function removeItem(itemDiv) {
+            itemDiv.remove();
+            calculateGrandTotal();
+        }
+
+        function balanceAlert() {
+            alert("Amount Mismatch!");
+        }
+
+        function generateInvoice() {
+            console.log("Generating Invoice");
+
+            var customerName = document.getElementById('customerName').value || "Estimate";
+            var mobileNumber = document.getElementById('mobileNumber').value || "";
+
+            var totalGross = 0;
+            var totalNett = 0;
+
+            document.querySelectorAll(".grossWt").forEach(input => {
+                totalGross += parseFloat(input.value) || 0;
+            });
+
+
+
+            document.querySelectorAll(".nettWt").forEach(input => {
+                totalNett += parseFloat(input.value) || 0;
+            });
+
+            totalGross = formatNumber(totalGross, 3);
+            totalNett = formatNumber(totalNett, 3);
+
+            var today = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+
+            let pdfname = customerName + " - " + today + '.pdf';
+
+            let pdfContainer = document.getElementById("pdfContainer");
+            pdfContainer.innerHTML = ""; // Clear previous content
+
+            let discount = document.getElementById('discount').value;
+
+            let tableHTML = `
+            <img src="headerimg.png" style="width: 7.5in;">
+            <table>
+      
+      <tr>
+        <td colspan="7" style="height:60px; border-right:none;"> Details of Receiver(Billed to): ${customerName.toUpperCase()} 
+        <div style="height:10px;"></div>    
+        Mobile: ${mobileNumber}</td>
+        <td colspan="2" style="border-left: none; vertical-align: top; text-align:right; padding-right: 25px; padding-top: 15px;"> Date: ${today} </td>
+      </tr>
+    
+      <tr class="bold">
+        <td style="width: 170px;">Description</td>
+        <td style="width: 55px;">Rate</td>
+        <td style="width: 55px;">G. Wt</td>
+        <td style="width: 55px;">St. Wt</td>
+        <td style="width: 55px;">N. Wt</td>
+        <td style="width: 55px;">VA %</td>
+        <td style="width: 55px;">MC/gm</td>
+        <td style="width: 55px;">Other</td>
+        <td>Amount</td>
+      </tr>`
+
+            document.querySelectorAll('.itemDiv').forEach(itemDiv => {
+                let itemName = itemDiv.querySelector('.itemName').value || "Miscellaneous";
+                let purity = itemDiv.querySelector('.purity').value || "";
+                let rate = itemDiv.querySelector('.rate')?.value || '0.000';
+                let grossWt = itemDiv.querySelector('.grossWt')?.value || '0.000';
+                let stoneWt = itemDiv.querySelector('.stoneWt')?.value || '0.000';
+                let nettWt = itemDiv.querySelector('.nettWt')?.value || '0.000';
+                let va = itemDiv.querySelector('.va')?.value || '0.00';
+                let mc = itemDiv.querySelector('.mc')?.value || '0.00';
+                let otherCharges = itemDiv.querySelector('.otherCharges')?.value || '0.00';
+                let subtotal = itemDiv.querySelector('.subtotal')?.value || '0.00';
+
+                //dont add code here, this is inside the loop
+
+                tableHTML += `
+                <tr>
+                    <td>${itemName.toUpperCase()}</td>
+                    <td class="amtCell">${rate}</td>
+                    <td class="amtCell">${grossWt}</td>
+                    <td class="amtCell">${stoneWt}</td>
+                    <td class="amtCell">${nettWt}</td>
+                    <td class="amtCell">${va}%</td>
+                    <td class="amtCell">${mc}</td>
+                    <td class="amtCell">${otherCharges}</td>
+                    <td class="amtCell">${subtotal}</td>
+                </tr>
+            `;
+            });
+
+            let gstPercent = document.getElementById("gstPercent").value || 0;
+            let gstAmount = document.getElementById('hiddenGSTAmt').value || 0;
+            let grandTotal = formatIndianCurrencyNew(document.getElementById('hiddenGrandTotal').value, 2);
+            let grandTotalAfterGST = document.getElementById('hiddenGrandTotalAfterGST').value;
+
+            let totalLabel = "SUBTOTAL"
+            if (gstPercent == 0) {
+                totalLabel = "TOTAL";
+            }
+
+            tableHTML += `
+            <tr class="bold totalRow">
+            <td>Total</td>
+            <td></td>
+            <td class="amtCell">${totalGross}</td>
+            <td class="amtCell">${totalNett}</td>
+            <td></td>
+            <td></td>
+            <td colspan="2" id="subtotalLabel">${totalLabel}</td>
+            <td  class="amtCell">${grandTotal}</td>
+            </tr>`
+
+            if (gstPercent != 0) {
+
+                tableHTML += `<tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="2">GST:</td>
+                    <td class="amtCell">${formatIndianCurrencyNew(gstAmount, 2)}</td>
+                  </tr>
+                  <tr class="bold">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="2">TOTAL</td>
+                    <td class="amtCell">${formatIndianCurrencyNew(grandTotalAfterGST, 2)}</td>
+
+                  </tr>`
+            }
+
+
+
+            if (discount != 0) {
+
+tableHTML += `<tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td colspan="2">Discount:</td>
+    <td class="amtCell">${formatIndianCurrencyNew(gstAmount, 2)}</td>
+  </tr>
+  <tr class="bold">
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td colspan="2">TOTAL</td>
+    <td class="amtCell">${formatIndianCurrencyNew(grandTotalAfterGST, 2)}</td>
+
+  </tr>`
+}
+
+
+            tableHTML +=
+                `
+                <tr>
+                <td colspan="7">${numberToIndianWords(grandTotalAfterGST)}</td>
+                <td class="bold" style="text-align: center;">Mode</td>
+                <td class="bold" style="text-align: center;">Amount</td>
+                </tr>
+                `
+
+
+
+            document.querySelectorAll('.paymentMethod').forEach(paymentMethod => {
+                let amt = paymentMethod.value;
+                let printName = paymentMethod.getAttribute("printName");
+                //dont add code here, this is inside the loop
+
+                tableHTML += `
+                    <tr>
+                    <td colspan="7" style="border-top: none; border-bottom:none;"></td>
+                    
+                    <td>${printName}</td>
+                    <td class="amtCell">${formatIndianCurrencyNew(amt, 2)}</td>
+                </tr>
+                        `;
+
+            });
+
+
+
+
+            tableHTML += `
+            <tr>
+            <td colspan="7" style="height:80px; vertical-align:bottom; padding-bottom:10px;">GOODS ONCE SOLD CANNOT BE TAKEN BACK OR EXCHANGED.</td>
+           
+            <td colspan="2" style="vertical-align: bottom; text-align: center; padding-bottom:10px;">For Pooja Jewellers</td>
+            </tr>
+             </table>
+            `
+            pdfContainer.innerHTML = tableHTML;
+
+        }
+
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+        // NEW FUNCTION FOR PDF ==============================================================================================================================
+
+        function generateInvoiceNew() {
+            console.log("Generating Invoice");
+
+            var customerName = document.getElementById('customerName').value || "Estimate";
+            var mobileNumber = document.getElementById('mobileNumber').value || "";
+
+            var totalGross = 0;
+            var totalNett = 0;
+
+            document.querySelectorAll(".grossWt").forEach(input => {
+                totalGross += parseFloat(input.value) || 0;
+            });
+
+            document.querySelectorAll(".nettWt").forEach(input => {
+                totalNett += parseFloat(input.value) || 0;
+            });
+
+            totalGross = formatNumber(totalGross, 3);
+            totalNett = formatNumber(totalNett, 3);
+
+            let discount = document.getElementById('discount').value;
+
+            var today = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+
+            
+
+            let tableHTML = `
+
+             <html>
+      <head>
+        <title>Print</title>
+        <style>
+
+.bold {
+            font-weight: bold;
+        }
+
+
+        table {
+            width: 190mm;
+            border-collapse: collapse;
+            border: 1px solid black;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+
+        td {
+            border: 1px solid black;
+            height: 18px;
+            padding-left: 5px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            line-height: 1;
+            /* no extra vertical space in line box */
+            vertical-align: middle;
+            /* aligns text vertically center; or use top if preferred */
+            white-space: nowrap;
+        }
+
+        .amtCell {
+            text-align: right;
+            padding-right: 5px;
+        }
+
+        @page {
+  size: A5 landscape;
+  margin: 0;
+}
+
+    .print-content {
+    margin: 0 auto;
+    width: 190mm;
+    }
+
+  .print-button {
+  display: block;
+  margin: 20px auto;
+  margin-top: 30px;
+  width: 250px;
+  padding: 8px 20px;
+  font-size: 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 50px;
+}
+
+@media print {
+  .print-button {
+    display: none;
+  }
+ 
+}
+
+    body {
+        width: 210mm;
+        margin: 0;
+        margin-top:10mm;
+        padding: 0;
+    }
+   
+
+
+    </style>
+ </head>
+      <body>
+
+
+
+<div class="print-content">
+
+            <img src="invoice-header.png" style="width: 190mm;">
+            <table>
+      
+      <tr>
+        <td colspan="8" style="height:45px; border-right:none;"> Details of Receiver(Billed to): ${customerName.toUpperCase()} 
+        <div style="height:10px;"></div>    
+        Mobile: ${mobileNumber}</td>
+        <td colspan="2" style="border-left: none; vertical-align: top; text-align:right; padding-right: 25px; padding-top: 15px;"> Date: ${today} </td>
+      </tr>
+    
+      <tr class="bold">
+        <td style="width: 53mm;">Description</td>
+        <td style="width: 10mm;">Purity</td>
+        <td style="width: 16mm; text-align:center;">Rate</td>
+        <td style="width: 16mm; text-align:center;">G. Wt</td>
+        <td style="width: 16mm; text-align:center;">St. Wt</td>
+        <td style="width: 16mm; text-align:center;">N. Wt</td>
+        <td style="width: 16mm; text-align:center;">VA %</td>
+        <td style="width: 16mm; text-align:center;">MC/gm</td>
+        <td style="width: 16mm; text-align:center;">Other</td>
+        <td style="width: 25mm; text-align:center;">Amount</td>
+      </tr>`
+
+            document.querySelectorAll('.itemDiv').forEach(itemDiv => {
+                let itemName = itemDiv.querySelector('.itemName').value || "Miscellaneous";
+                let purity = itemDiv.querySelector('.purity').value || "";
+                let rate = itemDiv.querySelector('.rate')?.value || '0.000';
+                let grossWt = itemDiv.querySelector('.grossWt')?.value || '0.000';
+                let stoneWt = itemDiv.querySelector('.stoneWt')?.value || '0.000';
+                let nettWt = itemDiv.querySelector('.nettWt')?.value || '0.000';
+                let va = itemDiv.querySelector('.va')?.value || '0.00';
+                let mc = itemDiv.querySelector('.mc')?.value || '0.00';
+                let otherCharges = itemDiv.querySelector('.otherCharges')?.value || '0.00';
+                let subtotal = itemDiv.querySelector('.subtotal')?.value || '0.00';
+
+                //dont add code here, this is inside the loop
+
+                tableHTML += `
+                <tr>
+                    <td>${itemName.toUpperCase()}</td>
+                    <td class="amtCell">${purity}</td>
+                    <td class="amtCell">${formatNumber(rate,2)}</td>
+                    <td class="amtCell">${grossWt}</td>
+                    <td class="amtCell">${stoneWt}</td>
+                    <td class="amtCell">${nettWt}</td>
+                    <td class="amtCell">${va}%</td>
+                    <td class="amtCell">${mc}</td>
+                    <td class="amtCell">${otherCharges}</td>
+                    <td class="amtCell">${subtotal}</td>
+                </tr>
+            `;
+            });
+
+            let gstPercent = document.getElementById("gstPercent").value || 0;
+            let gstAmount = document.getElementById('hiddenGSTAmt').value || 0;
+            let grandTotal = formatIndianCurrencyNew(document.getElementById('hiddenGrandTotal').value, 2);
+            let grandTotalAfterGST = document.getElementById('hiddenGrandTotalAfterGST').value;
+            let grandTotalAfterDiscount = document.getElementById('hiddenGrandTotalAfterDiscount').value;
+ 
+            let totalLabel = "TOTAL"
+            
+            if (gstPercent != 0 || discount != 0) {
+                totalLabel = "SUBTOTAL";
+            }
+
+            tableHTML += `
+            <tr class="bold totalRow">
+            <td>Total</td>
+            <td></td>
+            <td class="amtCell">${totalGross}</td>
+            <td class="amtCell">${totalNett}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td colspan="2" id="subtotalLabel">${totalLabel}</td>
+            <td  class="amtCell">${grandTotal}</td>
+            </tr>`
+
+            if (gstPercent != 0) {
+
+                tableHTML += `<tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="2">GST:</td>
+                    <td class="amtCell">${formatIndianCurrencyNew(gstAmount, 2)}</td>
+                  </tr>
+                 `
+            }
+
+
+
+            if (discount != 0) {
+
+tableHTML += `<tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td colspan="2">Discount:</td>
+    <td class="amtCell">${formatIndianCurrencyNew(discount, 2)}</td>
+  </tr>
+`
+}
+
+
+if (discount != 0 || gstPercent != 0) {
+tableHTML += `
+<tr class="bold">
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td colspan="2">TOTAL</td>
+    <td class="amtCell">${formatIndianCurrencyNew(grandTotalAfterDiscount, 2)}</td>
+
+  </tr>`
+}
+
+            
+            tableHTML +=
+                `
+                <tr>
+                <td colspan="8">${numberToIndianWords(grandTotalAfterGST)}</td>
+                <td class="bold" style="text-align: center;">Mode</td>
+                <td class="bold" style="text-align: center;">Amount</td>
+                </tr>
+                `
+
+
+
+            document.querySelectorAll('.paymentMethod').forEach(paymentMethod => {
+                let amt = paymentMethod.value;
+                let printName = paymentMethod.getAttribute("printName");
+                //dont add code here, this is inside the loop
+
+                tableHTML += `
+                    <tr>
+                    <td colspan="8" style="border-top: none; border-bottom:none;"></td>
+                    
+                    <td>${printName}</td>
+                    <td class="amtCell">${formatIndianCurrencyNew(amt, 2)}</td>
+                </tr>
+                        `;
+
+            });
+
+
+
+
+            tableHTML += `
+            <tr>
+            <td colspan="8" style="height:80px; vertical-align:bottom; padding-bottom:10px;">GOODS ONCE SOLD CANNOT BE TAKEN BACK OR EXCHANGED.</td>
+           
+            <td colspan="2" style="vertical-align: bottom; text-align: center; padding-bottom:10px;">For Pooja Jewellers</td>
+            </tr>
+             </table>
+
+
+</div>
+
+
+<button class="print-button" style="margin:auto;" onclick="window.print()">Print</button>
+
+
+              <script>
+          window.onload = function() {
+            window.print();
+            window.close();
+          }
+        <\/script>
+
+
+
+
+         </body>
+    </html>
+
+            `
+
+            const printWindow = window.open('', '', 'width=800,height=600', );
+            printWindow.document.write(tableHTML);
+            
+            //printWindow.document.close();
+
+        }
+
+
+
+
+
+
+
+
+
+        function numberToIndianWords(num) {
+            if (isNaN(num)) return 'Invalid number';
+
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+                'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+                'Seventeen', 'Eighteen', 'Nineteen'];
+
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const units = ['', 'Thousand', 'Lakh', 'Crore'];
+
+            function twoDigits(n) {
+                if (n < 20) return ones[n];
+                return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+            }
+
+            function segmentToWords(n) {
+                let str = '';
+                if (n > 99) {
+                    str += ones[Math.floor(n / 100)] + ' Hundred';
+                    n = n % 100;
+                    if (n > 0) str += ' and ';
+                }
+                if (n > 0) {
+                    str += twoDigits(n);
+                }
+                return str;
+            }
+
+            function integerToWords(integerPart) {
+                if (integerPart === 0) return 'Zero';
+                const segments = [];
+                segments.push(integerPart % 1000); // units
+                integerPart = Math.floor(integerPart / 1000);
+                segments.push(integerPart % 100);  // thousands
+                integerPart = Math.floor(integerPart / 100);
+                segments.push(integerPart % 100);  // lakhs
+                integerPart = Math.floor(integerPart / 100);
+                segments.push(integerPart);        // crores
+
+                let words = '';
+                for (let i = segments.length - 1; i >= 0; i--) {
+                    if (segments[i] !== 0) {
+                        words += segmentToWords(segments[i]) + ' ' + units[i] + ' ';
+                    }
+                }
+                return words.trim();
+            }
+
+            let [rupeesPart, paisePart] = num.toString().split('.');
+            rupeesPart = parseInt(rupeesPart, 10);
+            paisePart = parseInt((paisePart || '0').padEnd(2, '0').slice(0, 2), 10);
+
+            let result = '';
+            if (rupeesPart > 0) {
+                result += integerToWords(rupeesPart) + '';
+            }
+
+            if (paisePart > 0) {
+                if (result !== '') result += ' and ';
+                result += integerToWords(paisePart) + ' Paise';
+            }
+
+            if (result === '') result = 'Zero Rupees';
+
+            result += ' Only';
+
+            return result;
+        }
+
+
+
+        addItem();
+
+
+    </script>
+
+
+</body>
+
+</html>
