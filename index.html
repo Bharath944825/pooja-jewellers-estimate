@@ -260,11 +260,11 @@
 
             // Format values
             itemDiv.querySelector('.grossWt').value = formatNumber(grossWt, 3);
-            itemDiv.querySelector('.stoneWt').value = formatNumber(stoneWt, 3);
+            //itemDiv.querySelector('.stoneWt').value = formatNumber(stoneWt, 3);
             itemDiv.querySelector('.nettWt').value = formatNumber(nettWt, 3);
-            itemDiv.querySelector('.va').value = formatNumber(va, 2);
-            itemDiv.querySelector('.mc').value = formatNumber(mc, 2);
-            itemDiv.querySelector('.otherCharges').value = formatNumber(otherCharges, 2);
+            //itemDiv.querySelector('.va').value = formatNumber(va, 2);
+            //itemDiv.querySelector('.mc').value = formatNumber(mc, 2);
+            //itemDiv.querySelector('.otherCharges').value = formatNumber(otherCharges, 2);
 
             // Calculate and Update Subtotal
             const goldComponent = (nettWt * (1 + (va / 100))) * rate;
@@ -399,13 +399,13 @@
                 tableHTML += `
                 <tr>
                     <td>${itemName.toUpperCase()}</td>
-                    <td class="amtCell">${rate}</td>
+                    <td class="amtCell">${formatNumber(rate,2)}</td>
                     <td class="amtCell">${grossWt}</td>
-                    <td class="amtCell">${stoneWt}</td>
+                    <td class="amtCell">${formatNumber(stoneWt,2)}</td>
                     <td class="amtCell">${nettWt}</td>
-                    <td class="amtCell">${va}%</td>
-                    <td class="amtCell">${mc}</td>
-                    <td class="amtCell">${otherCharges}</td>
+                    <td class="amtCell">${formatNumber(va,2)}%</td>
+                    <td class="amtCell">${formatNumber(mc,2)}</td>
+                    <td class="amtCell">${formatNumber(otherCharges,2)}</td>
                     <td class="amtCell">${subtotal}</td>
                 </tr>
             `;
@@ -697,11 +697,11 @@ tableHTML += `<tr>
                     <td class="amtCell">${purity}</td>
                     <td class="amtCell">${formatNumber(rate,2)}</td>
                     <td class="amtCell">${grossWt}</td>
-                    <td class="amtCell">${stoneWt}</td>
+                    <td class="amtCell">${formatNumber(stoneWt,3)}</td>
                     <td class="amtCell">${nettWt}</td>
-                    <td class="amtCell">${va}%</td>
-                    <td class="amtCell">${mc}</td>
-                    <td class="amtCell">${otherCharges}</td>
+                    <td class="amtCell">${formatNumber(va,2)}%</td>
+                    <td class="amtCell">${formatNumber(mc,2)}</td>
+                    <td class="amtCell">${formatNumber(otherCharges,2)}</td>
                     <td class="amtCell">${subtotal}</td>
                 </tr>
             `;
@@ -723,10 +723,10 @@ tableHTML += `<tr>
             <tr class="bold totalRow">
             <td>Total</td>
             <td></td>
+            <td></td>
             <td class="amtCell">${totalGross}</td>
+            <td></td>
             <td class="amtCell">${totalNett}</td>
-            <td></td>
-            <td></td>
             <td></td>
             <td colspan="2" id="subtotalLabel">${totalLabel}</td>
             <td  class="amtCell">${grandTotal}</td>
