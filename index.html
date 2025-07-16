@@ -233,8 +233,6 @@
             let balanceReceivable = grandTotalAfterDiscount - cashAmt - upiAmt - cardAmt - oldAmt;
             document.getElementById("balanceReceivable").value = formatNumber(balanceReceivable, 2);
 
-
-
             if (balanceReceivable == 0) {
                 document.getElementById("generateInvoiceButton").onclick = generateInvoiceNew;
                 document.getElementById("generateInvoiceButton").style.backgroundColor = "green";
@@ -604,7 +602,7 @@ tableHTML += `<tr>
         }
 
         @page {
-  size: A5 landscape;
+  size: A4 portrait;
   margin: 0;
 }
 
@@ -631,6 +629,10 @@ tableHTML += `<tr>
 @media print {
   .print-button {
     display: none;
+  }
+
+   .print-content-copy {
+    page-break-before: always;
   }
  
 }
@@ -822,17 +824,43 @@ tableHTML += `
 
 
 </div>
+<div id="invoice-copy-container"></div>
 
 
-<button class="print-button" style="margin:auto;" onclick="window.print()">Print</button>
+<button class="print-button" style="margin:auto;" onclick="printTwoCopies()">Print</button>
+
+        
 
 
-              <script>
-          window.onload = function() {
-            window.print();
-            window.close();
-          }
-        <\/script>
+            <script>
+function printTwoCopies() {
+  // Get the original content
+  const original = document.querySelector(".print-content");
+
+  // Clone it
+  const copy = original.cloneNode(true);
+  copy.classList.add("print-content-copy");
+
+  // Append to container
+  const container = document.getElementById("invoice-copy-container");
+  container.innerHTML = ""; // Clear previous copies, if any
+  container.appendChild(copy);
+
+  // Trigger print
+  window.print();
+
+  // Optional: remove the copy after printing
+  window.onafterprint = () => {
+    container.innerHTML = "";
+  };
+}
+<\/script>
+
+
+
+
+
+
 
 
 
@@ -844,8 +872,6 @@ tableHTML += `
 
             const printWindow = window.open('', '', 'width=800,height=600', );
             printWindow.document.write(tableHTML);
-            
-            //printWindow.document.close();
 
         }
 
@@ -925,8 +951,6 @@ tableHTML += `
 
             return result;
         }
-
-
 
         addItem();
 
