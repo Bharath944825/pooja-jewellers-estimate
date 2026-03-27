@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -94,11 +95,19 @@
 
         <img src="page-header.png" style="width:350px; margin-top:0;">
 
+        <label>Invoice Number</label>
+        <input type="text" id="invoiceNumber" style="text-transform: uppercase;" autocomplete="off">
+
+
         <label>Customer Name</label>
         <input type="text" id="customerName" style="text-transform: uppercase;" autocomplete="off">
 
         <label>Mobile Number</label>
         <input type="text" id="mobileNumber" maxlength="10" autocomplete="off">
+
+        <label>Customer GSTIN</label>
+        <input type="text" id="gstin" style="text-transform: uppercase;" maxlength="15" autocomplete="off">
+
 
 <!--    
         <label>Rate</label>   
@@ -540,8 +549,11 @@ tableHTML += `<tr>
         function generateInvoiceNew() {
             console.log("Generating Invoice");
 
+            var invoiceNumber = document.getElementById('invoiceNumber').value || ""; 
             var customerName = document.getElementById('customerName').value || "Estimate";
             var mobileNumber = document.getElementById('mobileNumber').value || "";
+            var gstin = document.getElementById('gstin').value.toUpperCase() || "";
+
 
             var totalGross = 0;
             var totalNett = 0;
@@ -558,10 +570,8 @@ tableHTML += `<tr>
             totalNett = formatNumber(totalNett, 3);
 
             let discount = document.getElementById('discount').value;
-
             var today = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
-
-            
+            let gstPercent = document.getElementById("gstPercent").value || 0;
 
             let tableHTML = `
 
@@ -656,12 +666,26 @@ tableHTML += `<tr>
 
             <img src="invoice-header.png" style="width: 190mm;">
             <table>
-      
+
       <tr>
-        <td colspan="8" style="height:45px; border-right:none;"> Details of Receiver(Billed to): ${customerName.toUpperCase()} 
-        <div style="height:10px;"></div>    
-        Mobile: ${mobileNumber}</td>
-        <td colspan="2" style="border-left: none; vertical-align: top; text-align:right; padding-right: 25px; padding-top: 15px;"> Date: ${today} </td>
+        <td colspan="8" style="height:45px; border-right:none; padding-top: 3px;"> Details of Receiver(Billed to): ${customerName.toUpperCase()}
+        <div style="height:4px;"></div>
+        Mobile: ${mobileNumber}
+        <div style="height:4px;"></div>
+        
+        `;
+      
+        
+if (gstin != "" && gstPercent != 0) {
+                tableHTML += `GSTIN: ${gstin}`;
+            }
+
+
+      tableHTML += `
+      </td>
+        <td colspan="2" style="border-left: none; vertical-align: top; text-align:right; padding-right: 25px; padding-top: 5px;"> Date: ${today}
+            <div style="height:4px;"></div>
+            Invoice Num: ${invoiceNumber} </td>
       </tr>
     
       <tr class="bold">
@@ -675,7 +699,7 @@ tableHTML += `<tr>
         <td style="width: 16mm; text-align:center;">MC/gm</td>
         <td style="width: 16mm; text-align:center;">Other</td>
         <td style="width: 25mm; text-align:center;">Amount</td>
-      </tr>`
+      </tr>`;
 
             document.querySelectorAll('.itemDiv').forEach(itemDiv => {
                 let itemName = itemDiv.querySelector('.itemName').value || "Miscellaneous";
@@ -707,7 +731,7 @@ tableHTML += `<tr>
             `;
             });
 
-            let gstPercent = document.getElementById("gstPercent").value || 0;
+  
             let gstAmount = document.getElementById('hiddenGSTAmt').value || 0;
             let grandTotal = formatIndianCurrencyNew(document.getElementById('hiddenGrandTotal').value, 2);
             let grandTotalAfterGST = document.getElementById('hiddenGrandTotalAfterGST').value;
@@ -742,7 +766,7 @@ tableHTML += `<tr>
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td colspan="2">GST:</td>
+                    <td colspan="2">GST (${gstPercent}%)</td>
                     <td class="amtCell">${formatIndianCurrencyNew(gstAmount, 2)}</td>
                   </tr>
                  `
